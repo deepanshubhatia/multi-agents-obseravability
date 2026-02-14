@@ -26,6 +26,8 @@ from src.memory import MemoryStore
 from src.evaluation import Evaluator, AgentAction, TaskMetrics, AgentDecision
 from src.agents.examples import ResearchAgent, TaskExecutionAgent
 
+AGENT_OPS_API_KEY = os.getenv("AGENT_OPS_API_KEY", None)
+
 async def demo_multi_agent_coordination():
     """Demonstrate multi-agent coordination"""
     print("Starting Multi-Agent Orchestration Platform Demo")
@@ -135,12 +137,7 @@ async def demo_multi_agent_coordination():
                     # Check if task has completed or failed
                     if task_status.value in ["completed", "failed"]:
                         completed_task_ids.add(task_id)
-                        status_emoji = (
-                            "✅" if task_status.value == "completed" else "❌"
-                        )
-                        print(
-                            f"   {status_emoji} Task {task_id[:8]}... {task_status.value}"
-                        )
+                        print(f"   Task {task_id[:8]}... status: {task_status.value}")
 
     # Stop orchestrator
     print("Stopping orchestrator...")
