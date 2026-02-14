@@ -1,0 +1,5 @@
+task_id,agent_id,description,duration,success,actions_taken,tools_used,quality_score,efficiency_score
+379c9d18-989c-4928-bc83-f86d199ee456,190998de-8c46-4d2b-b15d-34cb140d6c0d,Research the latest developments in artificial intelligence,65.40841603279114,True,3,"web_search,summarize,analyze",0.9729579198360443,0.6727887786229452
+db821dc8-9857-4626-8039-7a47ae1e8b46,94b4d50b-6f29-4efc-b71c-d3b8f5a62d1f,"Calculate the total cost of items priced at 25, 45, and 30",8.225440979003906e-05,True,1,"calculate,validate,execute_step",0.7000004112720489,0.8399998903274537
+17b3686a-e1ca-45f9-9459-48750051f7a6,190998de-8c46-4d2b-b15d-34cb140d6c0d,Find information about climate change solutions,62.32451891899109,True,3,"web_search,summarize,analyze",0.9883774054050445,0.6769006414413452
+ff8d2488-eea6-4f61-957a-91697302e4a2,94b4d50b-6f29-4efc-b71c-d3b8f5a62d1f,Validate and execute a multi-step process,0.00012373924255371094,True,2,"calculate,validate,execute_step",0.7000006186962127,0.7999998350143434

@@ -1,0 +1,74 @@
+[
+  {
+    "task_id": "ee345c67-b84b-4208-846c-c4b3e757ff43",
+    "description": "Research the latest developments in artificial intelligence",
+    "agent_id": "29a94836-488e-4c4a-9975-42b4a020e30b",
+    "start_time": "2026-02-14T16:10:01.035838",
+    "end_time": "2026-02-14T16:11:53.499445",
+    "duration": 112.46295189857483,
+    "success": true,
+    "actions_taken": 3,
+    "tools_used": [
+      "web_search",
+      "summarize",
+      "analyze"
+    ],
+    "quality_score": 0.7376852405071258,
+    "efficiency_score": 0.6100493974685668,
+    "user_satisfaction": null
+  },
+  {
+    "task_id": "438f67f4-0210-428c-9a7b-39c50b6b8afb",
+    "description": "Calculate the total cost of items priced at 25, 45, and 30",
+    "agent_id": "754dbfe2-894f-446a-985f-63a9e4103372",
+    "start_time": "2026-02-14T16:11:54.153168",
+    "end_time": "2026-02-14T16:11:54.153438",
+    "duration": 0.0001990795135498047,
+    "success": true,
+    "actions_taken": 1,
+    "tools_used": [
+      "calculate",
+      "validate",
+      "execute_step"
+    ],
+    "quality_score": 0.7000009953975677,
+    "efficiency_score": 0.8399997345606487,
+    "user_satisfaction": null
+  },
+  {
+    "task_id": "90638775-76ee-445b-b249-f37a9f368b96",
+    "description": "Find information about climate change solutions",
+    "agent_id": "29a94836-488e-4c4a-9975-42b4a020e30b",
+    "start_time": "2026-02-14T16:11:55.154860",
+    "end_time": "2026-02-14T16:12:37.474488",
+    "duration": 42.31895089149475,
+    "success": true,
+    "actions_taken": 3,
+    "tools_used": [
+      "web_search",
+      "summarize",
+      "analyze"
+    ],
+    "quality_score": 0.9115947544574736,
+    "efficiency_score": 0.7035747321446737,
+    "user_satisfaction": null
+  },
+  {
+    "task_id": "3d856d72-493c-4922-8b3c-5730613f88a2",
+    "description": "Validate and execute a multi-step process",
+    "agent_id": "754dbfe2-894f-446a-985f-63a9e4103372",
+    "start_time": "2026-02-14T16:12:38.202805",
+    "end_time": "2026-02-14T16:12:38.202986",
+    "duration": 9.083747863769531e-05,
+    "success": true,
+    "actions_taken": 2,
+    "tools_used": [
+      "calculate",
+      "validate",
+      "execute_step"
+    ],
+    "quality_score": 0.7000004541873932,
+    "efficiency_score": 0.799999878883362,
+    "user_satisfaction": null
+  }
+]

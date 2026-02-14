@@ -1,0 +1,41 @@
+{
+  "research_result": {
+    "topic": "Find information about climate change solutions",
+    "summary": "Since climate change affects hundreds of millions of people worldwide, investing in planting trees, restoring nature, and enhancing natural carbon storage can go further than ever before. We mobilize the most influential investors and companies to take bold climate action. These solutions are more affordable than engineered infrastructure because they use existing ecological functions to absorb carbon and reduce environmental risks.",
+    "sources": [
+      {
+        "title": "List climate change solutions - Solutions to Climate Crisis",
+        "url": "//duckduckgo.com/l/?uddg=https%3A%2F%2Fduckduckgo.com%2Fy.js%3Fad_domain%3Dceres.org%26ad_provider%3Dbingv7aa%26ad_type%3Dtxad%26click_metadata%3DuGqSYv88IG7kisNX4DGhltuO8xrNhNgaTS1dr4uj6jvmp4EpeymAUp64wcMRj9iUIDVodugZQL0oGXC3VFy7qEKGdH_s10N0e7FK6TWdHkKXyneNyscpCJVTImKFAUxr_oQQdqCObR8Mibic6zPwX3dS2yyAKuDO93tVu_jJLqc.pTEL1Dr2wIQRSG%252DUShHPGQ%26rut%3D9fc98d4d6439e11725f194ef685aeabda025c8cdda1800ccd5435453c4b31ff0%26u3%3Dhttps%253A%252F%252Fwww.bing.com%252Faclick%253Fld%253De8etLKN7afUo_Rr7hVPR_XgDVUCUxTemUjebDRPUrAvvjEbpGXBElVxwFHRiWeGM51pp6Kk84RAZoABi4uM4NQAXyGnYT1A5E61qgOT_FePc4pqcmmh_YDLAzTAiN_8dFefZfyLm4kyRwOQHmezPexld17niB611Lu6aeiT3l%252DT91jmwacEfsDwjUdcaB5ndmUotoOCIjtXYKusB2fer0zq97zhA8%2526u%253DaHR0cHMlM2ElMmYlMmZ3d3cuY2VyZXMub3JnJTJmY2xpbWF0ZSUzZnV0bV9zb3VyY2UlM2RiaW5nJTI2dXRtX21lZGl1bSUzZHBhaWQlMjZ1dG1fY2FtcGFpZ24lM2RjZXJlc19ldmVyZ3JlZW5fa2V5d29yZHMlMjZ1dG1fdGVybSUzZGJpbmclMjZtc2Nsa2lkJTNkODA1M2EzMzk5MTQzMThmYTA1ZDljYWE5NmUwZGZkMzU%2526rlid%253D8053a339914318fa05d9caa96e0dfd35%26vqd%3D4%2D42815082320844487546400425746160642327%26iurl%3D%257B1%257DIG%253D0ED6A59B8816435A93F307F85BAEC237%2526CID%253D1052E6CAD98A60B002D4F1CAD8066172%2526ID%253DDevEx%252C5046.1&rut=aabf0ebed507826a385f51a73f38dee5630dc1acad033a5c904ec31ecb65868b",
+        "snippet": "We mobilize the most influential investors and companies to take bold climate action. Help us achieve a zero emissions future where both people and the planet can prosper.",
+        "type": "web",
+        "source": "DuckDuckGo"
+      },
+      {
+        "title": "Solutions to Climate Change That Communities Can Use Today",
+        "url": "//duckduckgo.com/l/?uddg=https%3A%2F%2Fwww.apu.apus.edu%2Farea%2Dof%2Dstudy%2Fmath%2Dand%2Dscience%2Fresources%2Fsolutions%2Dto%2Dclimate%2Dchange%2F&rut=8bbc0ac1f25fc48422f3b2d9c18033fe13984d65b18e2bae58526da3118b9c96",
+        "snippet": "These solutions are more affordable than engineered infrastructure because they use existing ecological functions to absorb carbon and reduce environmental risks. Since climate change affects hundreds of millions of people worldwide, investing in planting trees, restoring nature, and enhancing natural carbon storage can go further than ever before.",
+        "type": "web",
+        "source": "DuckDuckGo"
+      }
+    ],
+    "key_points": [],
+    "confidence": 0.63,
+    "search_engines": [
+      "DuckDuckGo"
+    ]
+  },
+  "analysis": {
+    "summary": "],",
+    "steps": [],
+    "tools_needed": [],
+    "complexity": "```"
+  },
+  "duration": 62.32451891899109,
+  "task_id": "17b3686a-e1ca-45f9-9459-48750051f7a6",
+  "timestamp": "2026-02-14T16:04:02.046064",
+  "metadata": {
+    "saved_at": "2026-02-14T16:04:02.046291",
+    "task_id": "17b3686a-e1ca-45f9-9459-48750051f7a6",
+    "agent_type": "research"
+  }
+}
