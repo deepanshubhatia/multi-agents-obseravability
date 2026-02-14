@@ -14,11 +14,11 @@ async def run_demo_with_real_search():
     Run the full multi-agent demo with real search functionality enabled
     """
 
-    print("🔄 Full Multi-Agent Demo with REAL Web Search")
+    print("Full Multi-Agent Demo with REAL Web Search")
     print("=" * 60)
-    print("📌 The ResearchAgent will now perform ACTUAL web searches")
-    print("📌 instead of using mock data")
-    print("\n⚠️  Note: This will make real web requests to DuckDuckGo")
+    print("The ResearchAgent will now perform ACTUAL web searches")
+    print("instead of using mock data")
+    print("\nNote: This will make real web requests to DuckDuckGo")
     print("\nStarting demo in 3 seconds...")
 
     await asyncio.sleep(3)
@@ -31,11 +31,11 @@ async def run_demo_with_real_search():
         await main_demo()
 
         print("\n" + "=" * 60)
-        print("🎉 Demo completed with REAL search results!")
-        print("📁 Check the 'research_outputs/' directory for the generated reports")
+        print("Demo completed with REAL search results!")
+        print("Check the 'research_outputs/' directory for the generated reports")
 
     except Exception as e:
-        print(f"\n❌ Error during demo: {e}")
+        print(f"\nError during demo: {e}")
 
 
 if __name__ == "__main__":

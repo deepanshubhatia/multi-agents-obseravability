@@ -11,55 +11,55 @@ from loguru import logger
 
 
 async def test_multi_source_search():
-    print("🔍 Testing Multi-Source Real Search Functionality")
+    print("Testing MultiSource Real Search Functionality")
     print("=" * 50)
 
     generator = ResearchReportGenerator()
 
     try:
         # Test 1: Basic search
-        print("\n📋 Test 1: Multi-source search for 'latest ai developments 2024'")
+        print("\nTest 1: Multi-source search for 'latest ai developments 2024'")
         result = await generator.generate_report(
             "latest ai developments 2024", max_sources=5
         )
 
-        print(f"✅ Search success: {result.get('success', True)}")
-        print(f"📊 Found {len(result.get('sources', []))} sources")
-        print(f"🎯 Confidence score: {result.get('confidence', 0):.2%}")
+        print(f"Search success: {result.get('success', True)}")
+        print(f"Found {len(result.get('sources', []))} sources")
+        print(f"Confidence score: {result.get('confidence', 0):.2%}")
 
         if result.get("search_engines"):
-            print(f"🔍 Search engines used: {', '.join(result['search_engines'])}")
+            print(f"Search engines used: {', '.join(result['search_engines'])}")
 
         if result.get("sources"):
-            print("\n📚 Top sources:")
+            print("\nTop sources:")
             for i, source in enumerate(result["sources"][:3], 1):
                 print(f"\n{i}. {source['title'][:80]}...")
                 print(
-                    f"   🔗 {source['url'][:80]}... ({source.get('source', 'Unknown')})"
+                    f"   {source['url'][:80]}... ({source.get('source', 'Unknown')})"
                 )
-                print(f"   📝 {source['snippet'][:120]}...")
+                print(f"   {source['snippet'][:120]}...")
 
         if result.get("summary"):
-            print(f"\n📝 Summary: {result['summary'][:300]}...")
+            print(f"\nSummary: {result['summary'][:300]}...")
 
         if result.get("key_points"):
-            print(f"\n🔑 Key points found: {len(result['key_points'])}")
+            print(f"\nKey points found: {len(result['key_points'])}")
             for i, point in enumerate(result["key_points"][:3], 1):
                 print(f"   {i}. {point[:100]}...")
 
         # Test 2: Different topic
-        print("\n\n📋 Test 2: Search for 'climate change solutions 2024'")
+        print("\n\nTest 2: Search for 'climate change solutions 2024'")
         result2 = await generator.generate_report(
             "climate change solutions 2024", max_sources=3
         )
 
         if result2.get("success"):
             print(
-                f"✅ Found {len(result2.get('sources', []))} sources with {result2.get('confidence', 0):.1%} confidence"
+                f"Found {len(result2.get('sources', []))} sources with {result2.get('confidence', 0):.1%} confidence"
             )
 
         # Test 3: Save detailed report
-        print("\n💾 Saving detailed research report...")
+        print("\nSaving detailed research report...")
         from src.output.research_output import ResearchOutputSaver
 
         saver = ResearchOutputSaver()
@@ -73,16 +73,16 @@ async def test_multi_source_search():
         }
 
         saved_path = saver.save_research_result(research_data, "test-multisearch-001")
-        print(f"✅ Report saved to: {saved_path}")
+        print(f"Report saved to: {saved_path}")
 
     except Exception as e:
-        print(f"❌ Error during search: {e}")
+        print(f"Error during search: {e}")
         logger.exception("Multi-source search test failed")
 
     finally:
         await generator.close()
 
-    print("\n🎉 Multi-source search test completed!")
+    print("\nMulti-source search test completed!")
 
 
 if __name__ == "__main__":

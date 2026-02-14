@@ -16,7 +16,7 @@ sys.path.append(str(Path(__file__).parent / "src"))
 
 def main():
     """Start the FastAPI server"""
-    print("🌐 Starting Multi-Agent Orchestration Platform API Server")
+    print("Starting Multi-Agent Orchestration Platform API Server")
     print("=" * 60)
 
     # Configure and start server

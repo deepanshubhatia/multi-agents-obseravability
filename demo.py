@@ -26,24 +26,13 @@ from src.memory import MemoryStore
 from src.evaluation import Evaluator, AgentAction, TaskMetrics, AgentDecision
 from src.agents.examples import ResearchAgent, TaskExecutionAgent
 
-# Load environment variables
-AGENT_OPS_API_KEY = os.getenv("AGENTOPS_API_KEY", "")
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-MODEL_NAME = os.getenv("MODEL_NAME", "glm-4.6:cloud")
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
-API_HOST = os.getenv("API_HOST", "0.0.0.0")
-API_PORT = int(os.getenv("API_PORT", "8000"))
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY", "")
-
-
 async def demo_multi_agent_coordination():
     """Demonstrate multi-agent coordination"""
-    print("🚀 Starting Multi-Agent Orchestration Platform Demo")
+    print("Starting Multi-Agent Orchestration Platform Demo")
     print("=" * 60)
 
     # Initialize components
-    print("📦 Initializing components...")
+    print("Initializing components...")
     memory_store = MemoryStore()
     evaluator = Evaluator()
 
@@ -55,14 +44,14 @@ async def demo_multi_agent_coordination():
         try:
             agentops.init(api_key=AGENT_OPS_API_KEY, tags=["multi-agent-demo"])
         except Exception as e:
-            print(f"   ⚠️ AgentOps initialization warning: {e}")
+            print(f"   AgentOps initialization warning: {e}")
     else:
-        print("   AgentOps API Key: Not provided ℹ️")
+        print("   AgentOps API Key: Not provided")
 
     orchestrator = Orchestrator(memory_store=memory_store)
 
     # Create and register agents
-    print("🤖 Creating agents...")
+    print("Creating agents...")
 
     # Check if Ollama is available
     model_name = os.getenv("MODEL_NAME", "glm-4.6:cloud")
@@ -78,17 +67,17 @@ async def demo_multi_agent_coordination():
     await orchestrator.register_agent(research_agent)
     await orchestrator.register_agent(execution_agent)
 
-    print(f"✅ Registered agents: {research_agent.name}, {execution_agent.name}")
+    print(f"Registered agents: {research_agent.name}, {execution_agent.name}")
 
     # Start orchestrator
-    print("🎯 Starting orchestrator...")
+    print("Starting orchestrator...")
     orchestrator_task = asyncio.create_task(orchestrator.start())
 
     # Wait a moment for everything to initialize
     await asyncio.sleep(1)
 
     # Submit tasks
-    print("\n📋 Submitting tasks to agents...")
+    print("Submitting tasks to agents...")
 
     tasks = [
         {
@@ -121,10 +110,10 @@ async def demo_multi_agent_coordination():
             priority=task_spec["priority"],
         )
         task_ids.append(task_id)
-        print(f"   📝 Task {task_id[:8]}... submitted: {task_spec['description']}")
+        print(f"   Task {task_id[:8]}... submitted: {task_spec['description']}")
 
     # Monitor progress
-    print("\n⏱️ Monitoring task progress...")
+    print("Monitoring task progress...")
     start_time = time.time()
 
     # Wait for tasks to complete (proper task-level checking)
@@ -154,7 +143,7 @@ async def demo_multi_agent_coordination():
                         )
 
     # Stop orchestrator
-    print("\n🛑 Stopping orchestrator...")
+    print("Stopping orchestrator...")
     orchestrator_task.cancel()
     try:
         await orchestrator_task
@@ -164,25 +153,25 @@ async def demo_multi_agent_coordination():
     await orchestrator.stop()
 
     # Stop Agents
-    print("\n🛑 Stopping agents...")
+    print("Stopping agents...")
     await research_agent.stop()
     await execution_agent.stop()
 
     # Display results
-    print("\n📊 Orchestrator Status:")
+    print("Orchestrator Status:")
     status = orchestrator.get_status()
     print(f"   Total tasks processed: {status['total_tasks_processed']}")
     print(f"   Registered agents: {status['registered_agents']}")
 
     # Save evaluation logs
-    print("\n💾 Saving evaluation logs...")
+    print("Saving evaluation logs...")
     output_dir = Path("evaluation_output")
     evaluator.save_logs(output_dir)
 
-    print(f"   📂 Logs saved to {output_dir}")
+    print(f"   Logs saved to {output_dir}")
 
     # Display evaluation summary
-    print("\n📈 Evaluation Summary:")
+    print("Evaluation Summary:")
     overall_metrics = evaluator.get_overall_metrics()
     if "error" not in overall_metrics:
         print(f"   Total tasks: {overall_metrics.get('total_tasks', 0)}")
@@ -205,7 +194,7 @@ async def demo_multi_agent_coordination():
             print(f"     Success rate: {agent_perf.get('success_rate', 0):.1%}")
 
     # Generate research outputs and metrics
-    print("\n📄 Generating research outputs and metrics...")
+    print("Generating research outputs and metrics...")
     try:
         from src.output.research_output import ResearchOutputSaver
         from src.metrics.llm_metrics import LLMMetricsCollector
@@ -222,33 +211,33 @@ async def demo_multi_agent_coordination():
             metrics_collector.save_metrics_to_file()
 
         print(
-            "   ✅ Research outputs and metrics saved to 'research_outputs/' directory"
+            "   Research outputs and metrics saved to 'research_outputs/' directory"
         )
     except Exception as e:
-        print(f"   ⚠️ Could not generate outputs: {e}")
+        print(f"   Could not generate outputs: {e}")
 
     # End AgentOps session if started
     if AGENT_OPS_API_KEY:
-        print("\n📊 Ending AgentOps session...")
+        print("Ending AgentOps session...")
         try:
             import agentops
 
             agentops.end_session("Demo completed successfully")
             print("   AgentOps session ended")
         except Exception as e:
-            print(f"   ⚠️ Could not end AgentOps session: {e}")
+            print(f"   Could not end AgentOps session: {e}")
 
-    print("\n🎉 Demo completed successfully!")
+    print("Demo completed successfully!")
     print("=" * 60)
 
 
 async def test_individual_components():
     """Test individual components"""
-    print("🧪 Testing Individual Components")
+    print("Testing Individual Components")
     print("=" * 40)
 
     # Test memory store
-    print("\n🧠 Testing Memory Store...")
+    print("Testing Memory Store...")
     memory_store = MemoryStore()
 
     from src.agents.base import MemoryItem
@@ -259,20 +248,20 @@ async def test_individual_components():
 
     await memory_store.add(test_memory)
     search_results = await memory_store.search("test")
-    print(f"   ✅ Memory store test - found {len(search_results)} items")
+    print(f"   Memory store test - found {len(search_results)} items")
 
     # Tool registry test
-    print("\n🔧 Testing Tool Registry...")
+    print("Testing Tool Registry...")
     from src.tools import ToolRegistry
 
     tools = ToolRegistry()
 
     tool_list = tools.list_tools()
-    print(f"   ✅ Available tools: {len(tool_list)}")
+    print(f"   Available tools: {len(tool_list)}")
     for tool in tool_list[:3]:  # Show first 3
         print(f"      - {tool['name']}: {tool['description']}")
 
-    print("\n✅ Component tests completed!")
+    print("Component tests completed!")
 
 
 async def main():
@@ -287,16 +276,16 @@ async def main():
         await demo_multi_agent_coordination()
 
     except KeyboardInterrupt:
-        print("\n⚠️ Demo interrupted by user")
+        print("\nDemo interrupted by user")
     except Exception as e:
-        print(f"\n❌ Demo failed with error: {e}")
+        print(f"\nDemo failed with error: {e}")
         import traceback
 
         traceback.print_exc()
 
 
 if __name__ == "__main__":
-    print("🎬 Multi-Agent Orchestration Platform")
+    print("Multi-Agent Orchestration Platform")
     print("   An open-source system for coordinating AI agents")
     print()
 

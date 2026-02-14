@@ -28,33 +28,33 @@ async def generate_research_report():
             "quantum computing breakthroughs 2024",
         ]
 
-        print("🔍 Generating Comprehensive Research Reports")
+        print("Generating Comprehensive Research Reports")
         print("=" * 60)
 
         all_reports = []
 
         for i, topic in enumerate(topics, 1):
-            print(f"\n📋 Generating report {i}/{len(topics)}: {topic}")
+            print(f"\nGenerating report {i}/{len(topics)}: {topic}")
             print("-" * 50)
 
             # Generate detailed report
             report = await generator.generate_report(topic, max_sources=5)
 
             print(
-                f"✅ Status: {'Success' if report.get('success', True) else 'Failed'}"
+                f"Status: {'Success' if report.get('success', True) else 'Failed'}"
             )
-            print(f"📊 Sources found: {len(report.get('sources', []))}")
-            print(f"🎯 Confidence: {report.get('confidence', 0):.1%}")
+            print(f"Sources found: {len(report.get('sources', []))}")
+            print(f"Confidence: {report.get('confidence', 0):.1%}")
 
             if report.get("search_engines"):
-                print(f"🔍 Search engines: {', '.join(report['search_engines'])}")
+                print(f"Search engines: {', '.join(report['search_engines'])}")
 
             # Display brief preview
             if report.get("summary"):
-                print(f"📝 Summary preview: {report['summary'][:100]}...")
+                print(f"Summary preview: {report['summary'][:100]}...")
 
             if report.get("key_points"):
-                print(f"🔑 Key points: {len(report['key_points'])}")
+                print(f"Key points: {len(report['key_points'])}")
 
             # Save the report
             research_data = {
@@ -68,7 +68,7 @@ async def generate_research_report():
             saved_path = output_saver.save_research_result(
                 research_data, f"comprehensive-{i}"
             )
-            print(f"💾 Saved to: {saved_path}")
+            print(f"Saved to: {saved_path}")
 
             # Add to collection
             all_reports.append(
@@ -80,7 +80,7 @@ async def generate_research_report():
 
         # Generate combined report
         print("\n" + "=" * 60)
-        print("📚 Generating Combined Analysis Report")
+        print("Generating Combined Analysis Report")
         print("=" * 60)
 
         combined_report = {
@@ -111,10 +111,10 @@ async def generate_research_report():
         with open(combined_file, "w") as f:
             json.dump(combined_report, f, indent=2, default=str)
 
-        print(f"✅ Combined report saved to: {combined_file}")
+        print(f"Combined report saved to: {combined_file}")
 
         # Generate visualizations
-        print("\n📊 Generating visualizations...")
+        print("\nGenerating visualizations...")
 
         # Create sample metrics for visualization
         metrics_data = {
@@ -136,23 +136,23 @@ async def generate_research_report():
 
         output_saver.save_agent_metrics(metrics_data)
 
-        print("\n🎉 Research report generation completed!")
-        print("\n📁 Generated files:")
+        print("\nResearch report generation completed!")
+        print("\nGenerated files:")
         print(f"   - Individual reports: {len(all_reports)} files in research_outputs/")
         print(f"   - Combined analysis: combined_analysis_report.json")
         print(f"   - Metrics visualizations: research_outputs/plots/")
 
         # Display key findings
-        print("\n🔑 Key Findings:")
+        print("\nKey Findings:")
         for item in combined_report["key_insights"]:
-            print(f"\n📈 {item['topic']}:")
+            print(f"\n{item['topic']}:")
             print(f"   Confidence: {item['confidence']:.1%}")
             print(f"   Sources: {item['source_count']}")
             print(f"   Key point: {item['key_development']}...")
 
     except Exception as e:
         logger.exception("Error generating research reports")
-        print(f"\n❌ Error: {e}")
+        print(f"\nError: {e}")
 
     finally:
         await generator.close()
