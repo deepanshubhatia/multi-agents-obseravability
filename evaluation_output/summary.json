@@ -3,9 +3,9 @@
     "total_tasks": 4,
     "successful_tasks": 4,
     "success_rate": 1.0,
-    "average_quality_score": 0.7623203611373901,
-    "average_efficiency_score": 0.7384059357643128,
-    "average_task_duration": 38.69554817676544,
+    "average_quality_score": 0.7857028490304946,
+    "average_efficiency_score": 0.7470973329544068,
+    "average_task_duration": 32.177000284194946,
     "unique_agents": 2,
     "total_actions": 4,
     "total_decisions": 0,
@@ -20,25 +20,25 @@
     "performance_trend": "stable"
   },
   "agent_performance": {
-    "29a94836-488e-4c4a-9975-42b4a020e30b": {
-      "agent_id": "29a94836-488e-4c4a-9975-42b4a020e30b",
+    "e87e31d3-13aa-47f5-92c8-93efd2a15505": {
+      "agent_id": "e87e31d3-13aa-47f5-92c8-93efd2a15505",
       "total_actions": 2,
       "successful_actions": 2,
       "success_rate": 1.0,
-      "average_duration": 77.39095139503479,
-      "average_quality_score": 0.8246399974822998,
-      "average_efficiency_score": 0.6568120648066202,
+      "average_duration": 0.0002856254577636719,
+      "average_quality_score": 0.7000014281272888,
+      "average_efficiency_score": 0.8199996191660565,
       "total_decisions": 0,
       "total_tasks_completed": 2
     },
-    "754dbfe2-894f-446a-985f-63a9e4103372": {
-      "agent_id": "754dbfe2-894f-446a-985f-63a9e4103372",
+    "efe560ae-9d0d-42c8-bde0-82b596e381cd": {
+      "agent_id": "efe560ae-9d0d-42c8-bde0-82b596e381cd",
       "total_actions": 2,
       "successful_actions": 2,
       "success_rate": 1.0,
-      "average_duration": 0.00014495849609375,
-      "average_quality_score": 0.7000007247924804,
-      "average_efficiency_score": 0.8199998067220053,
+      "average_duration": 64.35371494293213,
+      "average_quality_score": 0.8714042699337005,
+      "average_efficiency_score": 0.6741950467427572,
       "total_decisions": 0,
       "total_tasks_completed": 2
     }

@@ -1,10 +1,21 @@
 import aiohttp
 import asyncio
 import re
+import time
 from typing import Dict, List, Any, Optional
 from urllib.parse import quote
 from bs4 import BeautifulSoup
 from loguru import logger
+
+# Import observability instrumentation
+try:
+    from ..observability import (
+        create_tool_span,
+        is_agentops_initialized
+    )
+    OBSERVABILITY_AVAILABLE = True
+except ImportError:
+    OBSERVABILITY_AVAILABLE = False
 
 
 class SearchApiTool:
@@ -205,9 +216,26 @@ class SearchApiTool:
     async def search_multiple_sources(
         self, query: str, max_results: int = 5
     ) -> Dict[str, Any]:
-        """Search across multiple sources and combine results"""
+        """Search across multiple sources and combine results with AgentOps instrumentation."""
         logger.info(f"Searching across multiple sources for: {query}")
 
+        # Use tool span for RAG/search operations
+        if OBSERVABILITY_AVAILABLE:
+            async with create_tool_span(
+                tool_name="search_multiple_sources",
+                agent_name="SearchApiTool",
+                parameters={"query": query, "max_results": max_results}
+            ) as tool_span:
+                result = await self._do_search_multiple_sources(query, max_results)
+                tool_span.result = f"Found {result.get('total_results', 0)} results"
+                return result
+        else:
+            return await self._do_search_multiple_sources(query, max_results)
+
+    async def _do_search_multiple_sources(
+        self, query: str, max_results: int = 5
+    ) -> Dict[str, Any]:
+        """Internal implementation of multi-source search."""
         all_results = []
 
         # Try different search engines
@@ -267,9 +295,24 @@ class ResearchReportGenerator:
         self.search_tool = SearchApiTool()
 
     async def generate_report(self, topic: str, max_sources: int = 5) -> Dict[str, Any]:
-        """Generate a comprehensive research report"""
+        """Generate a comprehensive research report with AgentOps instrumentation."""
         logger.info(f"Generating research report for topic: {topic}")
 
+        # Use tool span for report generation
+        if OBSERVABILITY_AVAILABLE:
+            async with create_tool_span(
+                tool_name="generate_research_report",
+                agent_name="ResearchReportGenerator",
+                parameters={"topic": topic, "max_sources": max_sources}
+            ) as tool_span:
+                result = await self._do_generate_report(topic, max_sources)
+                tool_span.result = f"Report generated with {result.get('confidence', 0)} confidence"
+                return result
+        else:
+            return await self._do_generate_report(topic, max_sources)
+
+    async def _do_generate_report(self, topic: str, max_sources: int = 5) -> Dict[str, Any]:
+        """Internal implementation of report generation."""
         # Perform multi-source search
         search_data = await self.search_tool.search_multiple_sources(topic, max_sources)
 

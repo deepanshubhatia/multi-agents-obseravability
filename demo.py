@@ -13,7 +13,6 @@ from pathlib import Path
 import time
 from datetime import datetime
 from dotenv import load_dotenv
-import agentops
 
 # Load environment variables from .env file
 load_dotenv(".env")
@@ -26,7 +25,29 @@ from src.memory import MemoryStore
 from src.evaluation import Evaluator, AgentAction, TaskMetrics, AgentDecision
 from src.agents.examples import ResearchAgent, TaskExecutionAgent
 
-AGENT_OPS_API_KEY = os.getenv("AGENT_OPS_API_KEY", None)
+# Load environment variables
+AGENT_OPS_API_KEY = os.getenv("AGENTOPS_API_KEY", "95a64e81-cd28-4877-bfb2-59acf77d3c4f")
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+MODEL_NAME = os.getenv("MODEL_NAME", "glm-4.6:cloud")
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+API_HOST = os.getenv("API_HOST", "0.0.0.0")
+API_PORT = int(os.getenv("API_PORT", "8000"))
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY", "")
+
+
+# Import observability module
+try:
+    from src.observability import (
+        init_agentops,
+        end_agentops_session,
+        is_agentops_initialized,
+        get_agentops_status,
+    )
+    OBSERVABILITY_AVAILABLE = True
+except ImportError:
+    OBSERVABILITY_AVAILABLE = False
+
 
 async def demo_multi_agent_coordination():
     """Demonstrate multi-agent coordination"""
@@ -39,16 +60,24 @@ async def demo_multi_agent_coordination():
     evaluator = Evaluator()
 
     # Initialize AgentOps if API key is available
-    if AGENT_OPS_API_KEY:
-        import agentops
-
-        print(f"   AgentOps API Key: Provided {AGENT_OPS_API_KEY}")
+    if OBSERVABILITY_AVAILABLE:
+        print("   Initializing AgentOps with full tracing...")
+        if init_agentops(api_key=AGENT_OPS_API_KEY, tags=["multi-agent-demo"]):
+            status = get_agentops_status()
+            print(f"   AgentOps initialized successfully")
+            print(f"   Tracing enabled: LLM calls, Tools, Agent actions")
+        else:
+            print("   AgentOps initialization failed - tracing disabled")
+    elif AGENT_OPS_API_KEY:
+        print("   WARNING: AgentOps API key provided but observability module not available")
+        print("   Falling back to basic AgentOps tracking...")
         try:
+            import agentops
             agentops.init(api_key=AGENT_OPS_API_KEY, tags=["multi-agent-demo"])
         except Exception as e:
             print(f"   AgentOps initialization warning: {e}")
     else:
-        print("   AgentOps API Key: Not provided")
+        print("   AgentOps API Key: Not provided - tracing disabled")
 
     orchestrator = Orchestrator(memory_store=memory_store)
 
@@ -213,12 +242,15 @@ async def demo_multi_agent_coordination():
     except Exception as e:
         print(f"   Could not generate outputs: {e}")
 
-    # End AgentOps session if started
-    if AGENT_OPS_API_KEY:
+    # End AgentOps session with proper state
+    if OBSERVABILITY_AVAILABLE and is_agentops_initialized():
+        print("Ending AgentOps session...")
+        end_agentops_session(end_state="Success", end_state_reason="Demo completed successfully")
+        print("   AgentOps session ended - check dashboard for full trace")
+    elif AGENT_OPS_API_KEY:
         print("Ending AgentOps session...")
         try:
             import agentops
-
             agentops.end_session("Demo completed successfully")
             print("   AgentOps session ended")
         except Exception as e:

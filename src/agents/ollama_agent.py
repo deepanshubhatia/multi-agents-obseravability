@@ -4,6 +4,18 @@ import time
 from typing import Dict, List, Any, Optional
 from loguru import logger
 
+# Import observability instrumentation
+try:
+    from ..observability import (
+        create_llm_span,
+        create_tool_span,
+        create_local_llm_span,
+        init_agentops,
+        is_agentops_initialized
+    )
+    OBSERVABILITY_AVAILABLE = True
+except ImportError:
+    OBSERVABILITY_AVAILABLE = False
 
 class OllamaClient:
     """Client for interacting with Ollama API"""
@@ -165,88 +177,116 @@ class OllamaAgent:
         return True
 
     async def generate_response(self, prompt: str, context: str = "") -> str:
-        """Generate a response using the Ollama model"""
+        """Generate a response using the Ollama model with full observability tracking."""
         full_prompt = f"Agent Type: {self.agent_type}\n"
         if context:
             full_prompt += f"Context: {context}\n"
         full_prompt += f"Task: {prompt}\n\nPlease provide a helpful response:"
 
-        # Track LLM call with AgentOps if available
         start_time = time.time()
-        try:
-            result = await self.ollama_client.generate(
-                model=self.model_name, prompt=full_prompt, stream=False
+        error = None
+        response = ""
+
+        # Use both AgentOps span and local observability span
+        if OBSERVABILITY_AVAILABLE:
+            # Create local span for SQLite metrics storage
+            local_span = create_local_llm_span(
+                model=self.model_name,
+                prompt=full_prompt,
+                agent_name=self.agent_type
             )
 
-            duration = time.time() - start_time
-            response = result.get("response", "")
+            # Create AgentOps span for cloud tracing
+            async with create_llm_span(
+                model=self.model_name,
+                prompt=full_prompt,
+                agent_name=self.agent_type
+            ) as llm_span:
+                # Enter local span context
+                local_span.__enter__()
 
-            # Track LLM call
+                try:
+                    result = await self.ollama_client.generate(
+                        model=self.model_name, prompt=full_prompt, stream=False
+                    )
+                    response = result.get("response", "")
+                    llm_span.completion = response
+                    llm_span.tokens_prompt = len(full_prompt.split())
+                    llm_span.tokens_completion = len(response.split())
+                    local_span.completion = response
+                    local_span.prompt_tokens = len(full_prompt.split())
+                    local_span.completion_tokens = len(response.split())
+
+                    duration = time.time() - start_time
+
+                    # Record metrics if metrics collector is available
+                    if hasattr(self, "_metrics_collector") and self._metrics_collector:
+                        self._metrics_collector.record_llm_call(
+                            agent_id=getattr(self, "agent_id", "unknown"),
+                            agent_name=getattr(self, "agent_name", "OllamaAgent"),
+                            agent_type=self.agent_type,
+                            model=self.model_name,
+                            prompt=full_prompt,
+                            response=response,
+                            duration=duration,
+                            success=True,
+                        )
+
+                    logger.info(f"LLM response generated in {duration:.2f}s")
+                    return response
+
+                except Exception as e:
+                    error = str(e)
+                    llm_span.error = error
+                    local_span.error = error
+                    duration = time.time() - start_time
+
+                    # Record error metrics if available
+                    if hasattr(self, "_metrics_collector") and self._metrics_collector:
+                        self._metrics_collector.record_llm_call(
+                            agent_id=getattr(self, "agent_id", "unknown"),
+                            agent_name=getattr(self, "agent_name", "OllamaAgent"),
+                            agent_type=self.agent_type,
+                            model=self.model_name,
+                            prompt=full_prompt,
+                            response="",
+                            duration=duration,
+                            success=False,
+                            error=str(e),
+                        )
+
+                    logger.error(f"Error generating response: {e}")
+                    return f"Error generating response: {e}"
+                finally:
+                    # Exit local span context
+                    local_span.__exit__(None, None, None)
+        else:
+            # Fallback without instrumentation
             try:
-                import agentops
-
-                agentops.track(
-                    "LLM Call",
-                    {
-                        "agent_type": self.agent_type,
-                        "model": self.model_name,
-                        "prompt_length": len(full_prompt),
-                        "response_length": len(response),
-                        "duration": duration,
-                    },
+                result = await self.ollama_client.generate(
+                    model=self.model_name, prompt=full_prompt, stream=False
                 )
-            except (ImportError, AttributeError):
-                pass
-
-            # Record metrics if metrics collector is available
-            if hasattr(self, "_metrics_collector") and self._metrics_collector:
-                self._metrics_collector.record_llm_call(
-                    agent_id=getattr(self, "agent_id", "unknown"),
-                    agent_name=getattr(self, "agent_name", "OllamaAgent"),
-                    agent_type=self.agent_type,
-                    model=self.model_name,
-                    prompt=full_prompt,
-                    response=response,
-                    duration=duration,
-                    success=True,
-                )
-
-            print("response from ollama:", response)
-            return response
-        except Exception as e:
-            # Track LLM error
-            try:
-                import agentops
-
+                response = result.get("response", "")
                 duration = time.time() - start_time
-                agentops.track(
-                    "LLM Error",
-                    {
-                        "agent_type": self.agent_type,
-                        "model": self.model_name,
-                        "error": str(e),
-                        "duration": duration,
-                    },
-                )
-            except (ImportError, AttributeError):
-                pass
 
-            # Record error metrics if available
-            if hasattr(self, "_metrics_collector") and self._metrics_collector:
-                self._metrics_collector.record_llm_call(
-                    agent_id=getattr(self, "agent_id", "unknown"),
-                    agent_name=getattr(self, "agent_name", "OllamaAgent"),
-                    agent_type=self.agent_type,
-                    model=self.model_name,
-                    prompt=full_prompt,
-                    response="",
-                    duration=duration,
-                    success=False,
-                    error=str(e),
-                )
+                if hasattr(self, "_metrics_collector") and self._metrics_collector:
+                    self._metrics_collector.record_llm_call(
+                        agent_id=getattr(self, "agent_id", "unknown"),
+                        agent_name=getattr(self, "agent_name", "OllamaAgent"),
+                        agent_type=self.agent_type,
+                        model=self.model_name,
+                        prompt=full_prompt,
+                        response=response,
+                        duration=duration,
+                        success=True,
+                    )
 
-            logger.error(f"Error generating response: {e}")
-            return f"Error generating response: {e}"
+                return response
+
+            except Exception as e:
+                duration = time.time() - start_time
+                logger.error(f"Error generating response: {e}")
+                return f"Error generating response: {e}"
 
     async def analyze_task(self, task_description: str) -> Dict[str, Any]:
         """Analyze a task and determine approach"""

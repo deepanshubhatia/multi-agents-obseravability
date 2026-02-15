@@ -12,6 +12,18 @@ from ..evaluation.evaluator import Evaluator, AgentAction, TaskMetrics
 from ..output.research_output import ResearchOutputSaver
 from ..tools.search_api_tool import ResearchReportGenerator
 
+# Import observability instrumentation
+try:
+    from ..observability import (
+        create_agent_span,
+        create_tool_span,
+        create_llm_span,
+        is_agentops_initialized
+    )
+    OBSERVABILITY_AVAILABLE = True
+except ImportError:
+    OBSERVABILITY_AVAILABLE = False
+
 
 class ResearchAgent(BaseAgent):
     """Agent specialized in research tasks"""
@@ -44,115 +56,232 @@ class ResearchAgent(BaseAgent):
         self.register_tool("analyze", self._analyze)
 
     async def execute_task(self, task: Task) -> Any:
-        """Execute research tasks"""
+        """Execute research tasks with AgentOps instrumentation."""
         start_time = time.time()
 
-        try:
-            # Analyze the task using Ollama
-            analysis = await self.ollama_agent.analyze_task(task.description)
-
-            # Execute the research based on analysis
-            result = await self._conduct_research(task.description, analysis)
-
-            duration = time.time() - start_time
-
-            # Record action for evaluation
-            action = AgentAction(
-                agent_id=self.id,
+        # Use agent span for task execution
+        if OBSERVABILITY_AVAILABLE:
+            async with create_agent_span(
                 agent_name=self.name,
-                action_type="research",
+                agent_type="research",
+                action="execute_task",
                 task_id=task.id,
-                description=f"Conducted research: {task.description}",
-                timestamp=datetime.now(),
-                duration=duration,
-                success=True,
-                result=result,
-            )
+                task_description=task.description
+            ) as agent_span:
+                try:
+                    # Analyze the task using Ollama (this creates its own LLM span)
+                    analysis = await self.ollama_agent.analyze_task(task.description)
 
-            # Send action to evaluator if available
-            if self.evaluator:
-                self.evaluator.record_action(action)
+                    # Execute the research based on analysis
+                    result = await self._conduct_research(task.description, analysis)
 
-            # Record task metrics
-            if self.evaluator:
-                from ..evaluation.evaluator import TaskMetrics
+                    duration = time.time() - start_time
+                    agent_span.result = "completed"
 
-                task_metrics = TaskMetrics(
-                    task_id=task.id,
-                    description=task.description,
+                    # Record action for evaluation
+                    action = AgentAction(
+                        agent_id=self.id,
+                        agent_name=self.name,
+                        action_type="research",
+                        task_id=task.id,
+                        description=f"Conducted research: {task.description}",
+                        timestamp=datetime.now(),
+                        duration=duration,
+                        success=True,
+                        result=result,
+                    )
+
+                    # Send action to evaluator if available
+                    if self.evaluator:
+                        self.evaluator.record_action(action)
+
+                    # Record task metrics
+                    if self.evaluator:
+                        from ..evaluation.evaluator import TaskMetrics
+
+                        task_metrics = TaskMetrics(
+                            task_id=task.id,
+                            description=task.description,
+                            agent_id=self.id,
+                            start_time=datetime.fromtimestamp(start_time),
+                            end_time=datetime.now(),
+                            duration=duration,
+                            success=True,
+                            actions_taken=3,
+                            tools_used=["web_search", "summarize", "analyze"],
+                        )
+                        self.evaluator.record_task_metrics(task_metrics)
+
+                    # Save research output to file
+                    research_output = {
+                        "research_result": result,
+                        "analysis": analysis,
+                        "duration": duration,
+                        "task_id": task.id,
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                    self.output_saver.save_research_result(research_output, task.id)
+
+                    return research_output
+
+                except Exception as e:
+                    duration = time.time() - start_time
+                    agent_span.error = str(e)
+
+                    action = AgentAction(
+                        agent_id=self.id,
+                        agent_name=self.name,
+                        action_type="research",
+                        task_id=task.id,
+                        description=f"Failed research: {task.description}",
+                        timestamp=datetime.now(),
+                        duration=duration,
+                        success=False,
+                        result=None,
+                        error=str(e),
+                    )
+
+                    raise
+        else:
+            # Fallback without instrumentation
+            try:
+                analysis = await self.ollama_agent.analyze_task(task.description)
+                result = await self._conduct_research(task.description, analysis)
+                duration = time.time() - start_time
+
+                action = AgentAction(
                     agent_id=self.id,
-                    start_time=datetime.fromtimestamp(start_time),
-                    end_time=datetime.now(),
+                    agent_name=self.name,
+                    action_type="research",
+                    task_id=task.id,
+                    description=f"Conducted research: {task.description}",
+                    timestamp=datetime.now(),
                     duration=duration,
                     success=True,
-                    actions_taken=3,  # Count of actions taken
-                    tools_used=["web_search", "summarize", "analyze"],
+                    result=result,
                 )
-                self.evaluator.record_task_metrics(task_metrics)
 
-            # Save research output to file
-            research_output = {
-                "research_result": result,
-                "analysis": analysis,
-                "duration": duration,
-                "task_id": task.id,
-                "timestamp": datetime.now().isoformat(),
-            }
-            self.output_saver.save_research_result(research_output, task.id)
+                if self.evaluator:
+                    self.evaluator.record_action(action)
 
-            return research_output
+                if self.evaluator:
+                    from ..evaluation.evaluator import TaskMetrics
 
-        except Exception as e:
-            duration = time.time() - start_time
+                    task_metrics = TaskMetrics(
+                        task_id=task.id,
+                        description=task.description,
+                        agent_id=self.id,
+                        start_time=datetime.fromtimestamp(start_time),
+                        end_time=datetime.now(),
+                        duration=duration,
+                        success=True,
+                        actions_taken=3,
+                        tools_used=["web_search", "summarize", "analyze"],
+                    )
+                    self.evaluator.record_task_metrics(task_metrics)
 
-            action = AgentAction(
-                agent_id=self.id,
-                agent_name=self.name,
-                action_type="research",
-                task_id=task.id,
-                description=f"Failed research: {task.description}",
-                timestamp=datetime.now(),
-                duration=duration,
-                success=False,
-                result=None,
-                error=str(e),
-            )
+                research_output = {
+                    "research_result": result,
+                    "analysis": analysis,
+                    "duration": duration,
+                    "task_id": task.id,
+                    "timestamp": datetime.now().isoformat(),
+                }
+                self.output_saver.save_research_result(research_output, task.id)
 
-            raise
+                return research_output
+
+            except Exception as e:
+                duration = time.time() - start_time
+
+                action = AgentAction(
+                    agent_id=self.id,
+                    agent_name=self.name,
+                    action_type="research",
+                    task_id=task.id,
+                    description=f"Failed research: {task.description}",
+                    timestamp=datetime.now(),
+                    duration=duration,
+                    success=False,
+                    result=None,
+                    error=str(e),
+                )
+
+                raise
 
     async def _conduct_research(
         self, topic: str, analysis: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Conduct research on a given topic using real Google search"""
+        """Conduct research on a given topic using real Google search with instrumentation."""
         logger.info(f"Conducting real research on: {topic}")
 
-        # Generate comprehensive research report
-        report = await self.research_generator.generate_report(topic, max_sources=5)
+        # Use agent span for research operation
+        if OBSERVABILITY_AVAILABLE:
+            async with create_agent_span(
+                agent_name=self.name,
+                agent_type="research",
+                action="conduct_research",
+                topic=topic[:100]  # Truncate for logging
+            ) as agent_span:
+                # Generate comprehensive research report (creates its own tool spans)
+                report = await self.research_generator.generate_report(topic, max_sources=5)
 
-        # Add additional analysis from Ollama
-        try:
-            ollama_analysis = await self.ollama_agent.analyze_task(
-                f"Analyze these research results about {topic}: {report.get('summary', '')}"
-            )
+                # Add additional analysis from Ollama (creates its own LLM span)
+                try:
+                    ollama_analysis = await self.ollama_agent.analyze_task(
+                        f"Analyze these research results about {topic}: {report.get('summary', '')}"
+                    )
 
-            # Merge Ollama insights with our report
-            if ollama_analysis.get("summary"):
-                report["llm_analysis"] = ollama_analysis
-        except Exception as e:
-            logger.warning(f"Could not get Ollama analysis: {e}")
+                    if ollama_analysis.get("summary"):
+                        report["llm_analysis"] = ollama_analysis
+                except Exception as e:
+                    logger.warning(f"Could not get Ollama analysis: {e}")
 
-        return report
+                agent_span.result = "completed"
+                return report
+        else:
+            # Fallback without instrumentation
+            report = await self.research_generator.generate_report(topic, max_sources=5)
+
+            try:
+                ollama_analysis = await self.ollama_agent.analyze_task(
+                    f"Analyze these research results about {topic}: {report.get('summary', '')}"
+                )
+
+                if ollama_analysis.get("summary"):
+                    report["llm_analysis"] = ollama_analysis
+            except Exception as e:
+                logger.warning(f"Could not get Ollama analysis: {e}")
+
+            return report
 
     async def _web_search(self, query: str, max_results: int = 5) -> Dict[str, Any]:
-        """Real web search tool implementation using multiple search engines"""
-        try:
-            result = await self.research_generator.search_tool.search_multiple_sources(
-                query, max_results
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Web search failed: {e}")
-            return {"success": False, "error": str(e), "query": query, "results": []}
+        """Real web search tool implementation with AgentOps instrumentation."""
+        if OBSERVABILITY_AVAILABLE:
+            async with create_tool_span(
+                tool_name="web_search",
+                agent_name=self.name,
+                parameters={"query": query, "max_results": max_results}
+            ) as tool_span:
+                try:
+                    result = await self.research_generator.search_tool.search_multiple_sources(
+                        query, max_results
+                    )
+                    tool_span.result = f"Found {len(result.get('results', []))} results"
+                    return result
+                except Exception as e:
+                    logger.error(f"Web search failed: {e}")
+                    tool_span.error = str(e)
+                    return {"success": False, "error": str(e), "query": query, "results": []}
+        else:
+            try:
+                result = await self.research_generator.search_tool.search_multiple_sources(
+                    query, max_results
+                )
+                return result
+            except Exception as e:
+                logger.error(f"Web search failed: {e}")
+                return {"success": False, "error": str(e), "query": query, "results": []}
 
     async def _summarize(self, text: str) -> Dict[str, Any]:
         """Summarize text content"""
@@ -205,72 +334,143 @@ class TaskExecutionAgent(BaseAgent):
         self.register_tool("execute_step", self._execute_step)
 
     async def execute_task(self, task: Task) -> Any:
-        """Execute task-based actions"""
+        """Execute task-based actions with AgentOps instrumentation."""
         start_time = time.time()
 
-        try:
-            # Parse task description to determine actions
-            actions = await self._parse_actions(task.description)
-
-            # Execute actions sequentially
-            results = []
-            for action in actions:
-                action_result = await self._execute_action(action)
-                results.append(action_result)
-
-            duration = time.time() - start_time
-
-            # Record action for evaluation
-            action = AgentAction(
-                agent_id=self.id,
+        # Use agent span for task execution
+        if OBSERVABILITY_AVAILABLE:
+            async with create_agent_span(
                 agent_name=self.name,
-                action_type="execution",
+                agent_type="execution",
+                action="execute_task",
                 task_id=task.id,
-                description=f"Executed task: {task.description}",
-                timestamp=datetime.now(),
-                duration=duration,
-                success=True,
-                result=results,
-            )
+                task_description=task.description
+            ) as agent_span:
+                try:
+                    # Parse task description to determine actions
+                    actions = await self._parse_actions(task.description)
 
-            # Send action to evaluator if available
-            if self.evaluator:
-                self.evaluator.record_action(action)
+                    # Execute actions sequentially
+                    results = []
+                    for action in actions:
+                        action_result = await self._execute_action(action)
+                        results.append(action_result)
 
-            # Record task metrics
-            if self.evaluator:
-                from ..evaluation.evaluator import TaskMetrics
+                    duration = time.time() - start_time
+                    agent_span.result = "completed"
 
-                task_metrics = TaskMetrics(
-                    task_id=task.id,
-                    description=task.description,
+                    # Record action for evaluation
+                    action = AgentAction(
+                        agent_id=self.id,
+                        agent_name=self.name,
+                        action_type="execution",
+                        task_id=task.id,
+                        description=f"Executed task: {task.description}",
+                        timestamp=datetime.now(),
+                        duration=duration,
+                        success=True,
+                        result=results,
+                    )
+
+                    # Send action to evaluator if available
+                    if self.evaluator:
+                        self.evaluator.record_action(action)
+
+                    # Record task metrics
+                    if self.evaluator:
+                        from ..evaluation.evaluator import TaskMetrics
+
+                        task_metrics = TaskMetrics(
+                            task_id=task.id,
+                            description=task.description,
+                            agent_id=self.id,
+                            start_time=datetime.fromtimestamp(start_time),
+                            end_time=datetime.now(),
+                            duration=duration,
+                            success=True,
+                            actions_taken=len(actions),
+                            tools_used=["calculate", "validate", "execute_step"],
+                        )
+                        self.evaluator.record_task_metrics(task_metrics)
+
+                    return {
+                        "execution_results": results,
+                        "actions_taken": len(actions),
+                        "duration": duration,
+                        "success": True,
+                    }
+
+                except Exception as e:
+                    duration = time.time() - start_time
+                    agent_span.error = str(e)
+
+                    return {
+                        "execution_results": [],
+                        "actions_taken": 0,
+                        "duration": duration,
+                        "success": False,
+                        "error": str(e),
+                    }
+        else:
+            # Fallback without instrumentation
+            try:
+                actions = await self._parse_actions(task.description)
+
+                results = []
+                for action in actions:
+                    action_result = await self._execute_action(action)
+                    results.append(action_result)
+
+                duration = time.time() - start_time
+
+                action = AgentAction(
                     agent_id=self.id,
-                    start_time=datetime.fromtimestamp(start_time),
-                    end_time=datetime.now(),
+                    agent_name=self.name,
+                    action_type="execution",
+                    task_id=task.id,
+                    description=f"Executed task: {task.description}",
+                    timestamp=datetime.now(),
                     duration=duration,
                     success=True,
-                    actions_taken=len(actions),
-                    tools_used=["calculate", "validate", "execute_step"],
+                    result=results,
                 )
-                self.evaluator.record_task_metrics(task_metrics)
 
-            return {
-                "execution_results": results,
-                "actions_taken": len(actions),
-                "duration": duration,
-                "success": True,
-            }
+                if self.evaluator:
+                    self.evaluator.record_action(action)
 
-        except Exception as e:
-            duration = time.time() - start_time
+                if self.evaluator:
+                    from ..evaluation.evaluator import TaskMetrics
 
-            return {
-                "execution_results": [],
-                "actions_taken": 0,
-                "duration": duration,
-                "success": False,
-                "error": str(e),
-            }
+                    task_metrics = TaskMetrics(
+                        task_id=task.id,
+                        description=task.description,
+                        agent_id=self.id,
+                        start_time=datetime.fromtimestamp(start_time),
+                        end_time=datetime.now(),
+                        duration=duration,
+                        success=True,
+                        actions_taken=len(actions),
+                        tools_used=["calculate", "validate", "execute_step"],
+                    )
+                    self.evaluator.record_task_metrics(task_metrics)
+
+                return {
+                    "execution_results": results,
+                    "actions_taken": len(actions),
+                    "duration": duration,
+                    "success": True,
+                }
+
+            except Exception as e:
+                duration = time.time() - start_time
+
+                return {
+                    "execution_results": [],
+                    "actions_taken": 0,
+                    "duration": duration,
+                    "success": False,
+                    "error": str(e),
+                }
 
     async def _parse_actions(self, description: str) -> list:
         """Parse task description into actionable steps"""

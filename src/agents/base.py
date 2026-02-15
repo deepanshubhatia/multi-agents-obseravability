@@ -7,6 +7,17 @@ import uuid
 import time
 from loguru import logger
 
+# Import observability instrumentation
+try:
+    from ..observability import (
+        create_tool_span,
+        create_agent_span,
+        is_agentops_initialized
+    )
+    OBSERVABILITY_AVAILABLE = True
+except ImportError:
+    OBSERVABILITY_AVAILABLE = False
+
 
 @dataclass
 class Task:
@@ -94,31 +105,64 @@ class BaseAgent(ABC):
         logger.info(f"Task {task.id} added to agent {self.name}'s queue")
 
     async def process_task(self, task: Task):
-        """Process a single task"""
+        """Process a single task with AgentOps instrumentation."""
         task.status = "in_progress"
         self.active_tasks[task.id] = task
         logger.info(f"Agent {self.name} processing task {task.id}: {task.description}")
 
-        try:
-            # Execute the task
-            result = await self.execute_task(task)
-            task.result = result
-            task.status = "completed"
+        # Use agent span for task processing
+        if OBSERVABILITY_AVAILABLE:
+            async with create_agent_span(
+                agent_name=self.name,
+                agent_type=self.agent_type,
+                action="process_task",
+                task_id=task.id,
+                task_description=task.description
+            ) as agent_span:
+                try:
+                    # Execute the task
+                    result = await self.execute_task(task)
+                    task.result = result
+                    task.status = "completed"
+                    agent_span.result = "completed"
 
-            # Add to memory
-            memory_item = MemoryItem(
-                content=f"Completed task: {task.description}",
-                metadata={"task_id": task.id, "result": result},
-                importance=2.0,
-            )
-            await self.add_to_memory(memory_item)
+                    # Add to memory
+                    memory_item = MemoryItem(
+                        content=f"Completed task: {task.description}",
+                        metadata={"task_id": task.id, "result": result},
+                        importance=2.0,
+                    )
+                    await self.add_to_memory(memory_item)
 
-            logger.info(f"Task {task.id} completed by agent {self.name}")
+                    logger.info(f"Task {task.id} completed by agent {self.name}")
 
-        except Exception as e:
-            task.error = str(e)
-            task.status = "failed"
-            logger.error(f"Task {task.id} failed: {e}")
+                except Exception as e:
+                    task.error = str(e)
+                    task.status = "failed"
+                    agent_span.error = str(e)
+                    logger.error(f"Task {task.id} failed: {e}")
+        else:
+            # Fallback without instrumentation
+            try:
+                # Execute the task
+                result = await self.execute_task(task)
+                task.result = result
+                task.status = "completed"
+
+                # Add to memory
+                memory_item = MemoryItem(
+                    content=f"Completed task: {task.description}",
+                    metadata={"task_id": task.id, "result": result},
+                    importance=2.0,
+                )
+                await self.add_to_memory(memory_item)
+
+                logger.info(f"Task {task.id} completed by agent {self.name}")
+
+            except Exception as e:
+                task.error = str(e)
+                task.status = "failed"
+                logger.error(f"Task {task.id} failed: {e}")
 
         # Move from active to completed
         self.completed_tasks.append(self.active_tasks.pop(task.id))
@@ -164,93 +208,105 @@ class BaseAgent(ABC):
         logger.info(f"Tool '{name}' registered for agent {self.name}")
 
     async def use_tool(self, tool_name: str, **kwargs) -> Any:
-        """Use a registered tool"""
+        """Use a registered tool with proper AgentOps instrumentation."""
         if tool_name not in self.tools:
             raise ValueError(f"Tool '{tool_name}' not found")
 
         tool = self.tools[tool_name]
 
-        # Track tool usage with AgentOps if available
-        try:
-            import agentops
+        # Use proper tool span context manager for AgentOps tracing
+        if OBSERVABILITY_AVAILABLE:
+            async with create_tool_span(
+                tool_name=tool_name,
+                agent_name=self.name,
+                parameters=kwargs
+            ) as tool_span:
+                start_time = time.time()
+                try:
+                    if asyncio.iscoroutinefunction(tool):
+                        result = await tool(**kwargs)
+                    else:
+                        result = tool(**kwargs)
 
-            agentops.track(
-                "Tool Usage",
-                {
-                    "agent": self.name,
-                    "tool": tool_name,
-                    "parameters": kwargs,
-                },
-            )
-        except (ImportError, AttributeError):
-            pass
+                    duration = time.time() - start_time
+                    tool_span.result = result
 
-        start_time = time.time()
-        try:
-            if asyncio.iscoroutinefunction(tool):
-                result = await tool(**kwargs)
-            else:
-                result = tool(**kwargs)
+                    # Record metrics if metrics collector is available
+                    if hasattr(self, "metrics_collector") and self.metrics_collector:
+                        self.metrics_collector.record_tool_usage(
+                            agent_id=self.id,
+                            agent_name=self.name,
+                            tool_name=tool_name,
+                            parameters=kwargs,
+                            result=result,
+                            duration=duration,
+                            success=True,
+                        )
 
-            # Track successful tool execution
+                    logger.debug(f"Tool '{tool_name}' executed successfully in {duration:.2f}s")
+                    return result
+
+                except Exception as e:
+                    duration = time.time() - start_time
+                    tool_span.error = str(e)
+
+                    # Record error metrics if available
+                    if hasattr(self, "metrics_collector") and self.metrics_collector:
+                        self.metrics_collector.record_tool_usage(
+                            agent_id=self.id,
+                            agent_name=self.name,
+                            tool_name=tool_name,
+                            parameters=kwargs,
+                            result=None,
+                            duration=duration,
+                            success=False,
+                            error=str(e),
+                        )
+
+                    logger.error(f"Tool '{tool_name}' failed: {e}")
+                    raise
+        else:
+            # Fallback without instrumentation
+            start_time = time.time()
             try:
+                if asyncio.iscoroutinefunction(tool):
+                    result = await tool(**kwargs)
+                else:
+                    result = tool(**kwargs)
+
                 duration = time.time() - start_time
-                agentops.track(
-                    "Tool Execution Success",
-                    {
-                        "agent": self.name,
-                        "tool": tool_name,
-                        "duration": duration,
-                        "success": True,
-                    },
-                )
-            except (ImportError, AttributeError):
-                pass
 
-            # Record metrics if metrics collector is available
-            if hasattr(self, "metrics_collector") and self.metrics_collector:
-                self.metrics_collector.record_tool_usage(
-                    agent_id=self.id,
-                    agent_name=self.name,
-                    tool_name=tool_name,
-                    parameters=kwargs,
-                    result=result,
-                    duration=duration,
-                    success=True,
-                )
+                # Record metrics if metrics collector is available
+                if hasattr(self, "metrics_collector") and self.metrics_collector:
+                    self.metrics_collector.record_tool_usage(
+                        agent_id=self.id,
+                        agent_name=self.name,
+                        tool_name=tool_name,
+                        parameters=kwargs,
+                        result=result,
+                        duration=duration,
+                        success=True,
+                    )
 
-            return result
-        except Exception as e:
-            # Track failed tool execution
-            try:
+                return result
+
+            except Exception as e:
                 duration = time.time() - start_time
-                agentops.track(
-                    "Tool Execution Failed",
-                    {
-                        "agent": self.name,
-                        "tool": tool_name,
-                        "duration": duration,
-                        "error": str(e),
-                        "success": False,
-                    },
-                )
-            except (ImportError, AttributeError):
-                pass
 
-            # Record error metrics if available
-            if hasattr(self, "metrics_collector") and self.metrics_collector:
-                self.metrics_collector.record_tool_usage(
-                    agent_id=self.id,
-                    agent_name=self.name,
-                    tool_name=tool_name,
-                    parameters=kwargs,
-                    result=None,
-                    duration=duration,
-                    success=False,
-                    error=str(e),
-                )
+                # Record error metrics if available
+                if hasattr(self, "metrics_collector") and self.metrics_collector:
+                    self.metrics_collector.record_tool_usage(
+                        agent_id=self.id,
+                        agent_name=self.name,
+                        tool_name=tool_name,
+                        parameters=kwargs,
+                        result=None,
+                        duration=duration,
+                        success=False,
+                        error=str(e),
+                    )
 
-            raise
+                raise
 
     def get_status(self) -> Dict[str, Any]:
         """Get agent status"""
